@@ -1,0 +1,29 @@
+name: buildbot preflight (ipf)
+on: [push, workflow_dispatch]
+
+jobs:
+  linux-x64:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Default build, no IPF
+        run: |
+          make -f Makefile.libretro -j$(nproc)
+          nm -D --defined-only hatari_libretro.so | grep " T retro_run"
+          nm -D --undefined-only hatari_libretro.so | grep -i caps && exit 1 || echo "no capsimage symbols, as expected"
+          make -f Makefile.libretro clean
+      - name: Build the SPS capsimage library
+        run: |
+          git clone --depth 1 https://github.com/FrodeSolheim/capsimg.git /tmp/capsimg
+          cd /tmp/capsimg
+          ./bootstrap || true
+          ./configure
+          make -j$(nproc)
+          find . -name "*.so*" -o -name "libcapsimage*" | head
+      - name: Build with IPF support
+        run: |
+          lib=$(dirname $(find /tmp/capsimg -name "capsimg.so*" -o -name "libcapsimage.so*" | head -1))
+          echo "lib dir: $lib"; ls "$lib"
+          make -f Makefile.libretro -j$(nproc) capsimg=1 capssrc=/tmp/capsimg capslib="$lib" capslibname=capsimage
+          nm -D --defined-only hatari_libretro.so | grep " T retro_run"
+          nm -D --undefined-only hatari_libretro.so | grep -i caps | head
