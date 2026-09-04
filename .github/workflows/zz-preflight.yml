@@ -21,7 +21,9 @@ jobs:
           make -j$(nproc)
           find . -name "*.so*" -o -name "libcapsimage*" | head
       - name: These internal headers rely on the library's own precompiled header
-        run: sed -i '1i #include <stdint.h>' /tmp/capsimg/Core/CommonTypes.h
+        run: |
+          sed -i '1i #include <stdint.h>' /tmp/capsimg/Core/CommonTypes.h
+          head -3 /tmp/capsimg/Core/CommonTypes.h
       - name: Show that the link line carries the library
         run: |
           make -f Makefile.libretro -n capsimg=1 capssrc=/tmp/capsimg capslib=/tmp/capsimg/.libs             | grep -- "-lcapsimage" | tail -1
